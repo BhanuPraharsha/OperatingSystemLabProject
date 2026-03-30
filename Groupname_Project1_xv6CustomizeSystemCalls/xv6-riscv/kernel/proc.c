@@ -5,6 +5,7 @@
 #include "spinlock.h"
 #include "proc.h"
 #include "defs.h"
+#include "pstat.h"
 
 struct cpu cpus[NCPU];
 
@@ -687,4 +688,39 @@ procdump(void)
     printf("%d %s %s", p->pid, state, p->name);
     printf("\n");
   }
+}
+
+//function for psinfo:we iterate through the proc array, lock each process, extract the data
+//and copy it to the user space safely using *copyout*
+
+int
+get_psinfo(uint64 addr){
+  struct proc* p;
+  struct uproc up;
+  int count = 0;
+  
+  struct proc* my_p = myproc();
+
+  //iterate over global process table
+  for(p = proc; p < &proc[NPROC]; p++){
+    acquire(&p->lock); //acquire lock to safely read the process
+
+    if(p->state!=UNUSED){
+      up.pid = p->pid;
+      up.state = p->state;
+      up.ppid = p->parent?p->parent->pid:0;
+
+      safestrcpy(up.name, p->name, sizeof(up.name));
+
+      if(copyout(my_p->pagetable, addr + count * sizeof(struct uproc), (char*)&up, sizeof(up)) < 0){
+        release(&p->lock);
+        return -1;
+      }
+
+      count++;
+
+    }
+      release(&p->lock);
+  }
+  return count;
 }
