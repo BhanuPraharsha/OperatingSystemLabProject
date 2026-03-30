@@ -107,3 +107,16 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+//function for psinfo that will take the pointer passed from userspace and pass it to the helper
+uint64
+sys_psinfo(void)
+{
+  uint64 p; //holds the virtual address of user's array
+
+  //argaddr fetches the 0th argument that is our struct uproc pointer
+  argaddr(0, &p);
+  return get_psinfo(p);
+
+
+}
