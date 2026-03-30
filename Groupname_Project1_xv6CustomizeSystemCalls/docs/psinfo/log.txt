@@ -1,0 +1,9 @@
+implemented psinfo:
+    new files added:
+        kernel/pstat.h: contains struct to hold process information
+        user/ps.c: contains the actual executable user files
+
+    other changes:
+        -added a bunch of headers in different header files and necessary hooks and macros
+        -implemented sys_psinfo in kernel/sysproc.changes : calls helper function : get_psinfo
+        -implemented helper function: get_psinfo in kernel/proc.c
