@@ -23,3 +23,5 @@
 #define SYS_psinfo 22
 #define SYS_signal 23
 #define SYS_sigreturn 24
+#define SYS_msgq_send 25
+#define SYS_msgq_recv 26
