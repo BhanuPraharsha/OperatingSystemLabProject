@@ -28,6 +28,8 @@ int uptime(void);
 int psinfo(struct uproc*);
 int signal(int, void(*)(int));
 int sigreturn(void);
+int msgq_send(int, char*);
+int msgq_recv(int, char*);
 
 // ulib.c
 int stat(const char*, struct stat*);

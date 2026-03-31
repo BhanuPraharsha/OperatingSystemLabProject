@@ -45,3 +45,5 @@ entry("uptime");
 entry("psinfo");
 entry("signal");
 entry("sigreturn");
+entry("msgq_send");
+entry("msgq_recv");
