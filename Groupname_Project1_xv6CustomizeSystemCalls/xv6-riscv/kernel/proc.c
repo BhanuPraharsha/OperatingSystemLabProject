@@ -6,7 +6,7 @@
 #include "proc.h"
 #include "defs.h"
 #include "pstat.h"
-
+#include "signal.h"
 struct cpu cpus[NCPU];
 
 struct proc proc[NPROC];
@@ -132,6 +132,11 @@ found:
     release(&p->lock);
     return 0;
   }
+  if((p->sig_tf = (struct trapframe *)kalloc())==0){
+    freeproc(p);
+    release(&p->lock);
+    return 0;
+  }
 
   // An empty user page table.
   p->pagetable = proc_pagetable(p);
@@ -141,6 +146,11 @@ found:
     return 0;
   }
 
+  for(int i=0; i< NSIG; i++){
+    p->signal_handlers[i] = SIG_DFL;
+  }
+  p->pending_signals = 0;
+  p->is_handling_signal = 0;
   // Set up new context to start executing at forkret,
   // which returns to user space.
   memset(&p->context, 0, sizeof(p->context));
@@ -159,6 +169,9 @@ freeproc(struct proc *p)
   if(p->trapframe)
     kfree((void*)p->trapframe);
   p->trapframe = 0;
+  if(p->sig_tf)
+    kfree((void*)p->sig_tf);
+  p->sig_tf  = 0;
   if(p->pagetable)
     proc_freepagetable(p->pagetable, p->sz);
   p->pagetable = 0;
@@ -591,14 +604,18 @@ wakeup(void *chan)
 // The victim won't exit until it tries to return
 // to user space (see usertrap() in trap.c).
 int
-kkill(int pid)
+kkill(int pid, int signum)
 {
   struct proc *p;
+  if(signum < 0 || signum >= NSIG) return -1;
 
   for(p = proc; p < &proc[NPROC]; p++){
     acquire(&p->lock);
     if(p->pid == pid){
-      p->killed = 1;
+      // p->killed = 1;
+      p->pending_signals |= (1 << signum);
+      if(signum == SIGKILL)
+        p->killed = 1;
       if(p->state == SLEEPING){
         // Wake process from sleep().
         p->state = RUNNABLE;

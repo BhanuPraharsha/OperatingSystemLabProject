@@ -6,6 +6,7 @@
 #include "spinlock.h"
 #include "proc.h"
 #include "vm.h"
+#include "signal.h"
 
 uint64
 sys_exit(void)
@@ -90,9 +91,13 @@ uint64
 sys_kill(void)
 {
   int pid;
+  int signum; //1. create a variable to hold the signal number
 
+  //2.fetch both arguments:
   argint(0, &pid);
-  return kkill(pid);
+  argint(1, &signum);
+// printf("KERNEL: sys_kill received pid=%d, signum=%d\n", pid, signum);
+  return kkill(pid, signum);
 }
 
 // return how many clock tick interrupts have occurred
@@ -119,4 +124,37 @@ sys_psinfo(void)
   return get_psinfo(p);
 
 
+}
+
+//user programs need a way to tell the kernel when i got sigint run this
+uint64
+sys_signal(void){
+  int signum;
+  uint64 handler_addr;
+  argint(0, &signum);
+  argaddr(1, &handler_addr);
+// printf("KERNEL: sys_signal registered signum=%d to address 0x%lx\n", signum, handler_addr);
+  if(signum < 0 || signum >= NSIG || signum == SIGKILL)
+  return -1; //cannot catch sigkill
+
+
+  struct proc*p = myproc();
+  acquire(&p->lock);
+  p->signal_handlers[signum] = (void (*)(int))handler_addr;
+  release(&p->lock);
+
+  return 0;
+}
+
+
+uint64
+sys_sigreturn(void) {
+  struct proc *p = myproc();
+
+  //restore the original execution state
+  memmove(p->trapframe, p->sig_tf, sizeof(struct trapframe));
+
+  //allow new signals to be handled
+  p->is_handling_signal = 0;
+  return p->trapframe->a0;//return the original signal
 }

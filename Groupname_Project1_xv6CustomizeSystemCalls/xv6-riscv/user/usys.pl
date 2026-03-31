@@ -43,3 +43,5 @@ entry("sbrk");
 entry("pause");
 entry("uptime");
 entry("psinfo");
+entry("signal");
+entry("sigreturn");

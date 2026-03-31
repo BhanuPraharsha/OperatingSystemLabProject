@@ -1,0 +1,42 @@
+implemented signals:
+    >previously it was only kill(pid)
+    >but now it is kill(pid, signal)
+    >implemented signal(singal, handler): assigns what to do when a signal interrupts
+
+    >new files:
+        test_signal.c + executable: testfile for the implementation
+        kernel/signal.h : defines information about signals and signal handlers: default and ignore
+
+    
+    >changes:
+        -"kill() user command now takes two arguments"
+        -in kernel/sysproc.c implemented:
+                ~sys_signal() : system call for signal()
+                ~sys_sigreturn() : systemcall for return to userspace
+
+                ~sys_kill(): systemcall for kill()
+
+        -in kernel/proc.c implemented:
+                ~configured kkill() [helper fucntion of sys_kill()] to handle signal and the respective handlers
+                ~configured allocproc() 
+                ~coonfigures freeproc()
+
+
+        -kernel/trap.c
+                ~usertrap(): added the logic to intercept the execution flow right 
+                             returning to user space, check the pending_signals bitmask,
+                             back up the trapframe, and redirect the program counter (epc) to     
+                             the user's custom handler.
+
+        -kernel/proc.h
+                ~struct proc: [process control block]: added pending_signals (the mailbox), 
+                                signal_handlers (the array of pointers), sig_tf (the backup trapframe),
+                                 and is_handling_signal (the re-entrancy guard).
+
+        
+        -other necessary changes and wiring 
+
+
+NOTE: kill(pid) is invalid now if you want to kill the process then use kill(pid, 9)
+        or kill(pid, SIGKILL) if kernel/signal.h included
+
