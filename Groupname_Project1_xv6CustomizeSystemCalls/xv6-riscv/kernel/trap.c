@@ -5,6 +5,7 @@
 #include "spinlock.h"
 #include "proc.h"
 #include "defs.h"
+#include "signal.h"
 
 struct spinlock tickslock;
 uint ticks;
@@ -83,7 +84,49 @@ usertrap(void)
   // give up the CPU if this is a timer interrupt.
   if(which_dev == 2)
     yield();
+if(p->pending_signals > 0) {
+      // printf("KERNEL: usertrap intercepted pid %d! pending=%ld, handling_flag=%d\n", 
+            //  p->pid, p->pending_signals, p->is_handling_signal);
+  }  
+  //check for signals only if we arent already handling one
+  if(p->pending_signals > 0 && p->is_handling_signal == 0){
+    for(int i=0; i<32; i++){
+      if(p->pending_signals & (1 << i)){
 
+        //1.handle to SIG_IGN (ignore)
+        if(p->signal_handlers[i] == SIG_IGN){
+          // printf("KERNEL: Signal %d is ignored.\n", i);
+            p->pending_signals &= ~(1 << i);//clear bit
+            continue;
+        }
+
+        //2. handle SIG_DFL (default action)
+        if(p->signal_handlers[i] == SIG_DFL){
+          // printf("KERNEL: Signal %d executing default action (kill).\n", i);
+          setkilled(p);
+          break;
+        }
+
+        //3. handle custom user fucntion
+        //save current execution state
+
+        memmove(p->sig_tf, p->trapframe, sizeof(struct trapframe));
+        p->is_handling_signal = 1;
+
+        //setup trapfram to jump to the user handler
+        p->trapframe->epc = (uint64)p->signal_handlers[i];
+        p->trapframe->a0 = i; //pass the signal number as 1st argument
+
+        //clear the signal bit now that its beign handled
+        p->pending_signals &= ~(1 << i);
+        break; //handle one signal at at time
+      }
+    }
+  }
+
+  //if the default action killed the process exit now
+  if(killed(p))
+  kexit(-1);
   prepare_return();
 
   // the user page table to switch to, for trampoline.S

@@ -104,4 +104,8 @@ struct proc {
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
+  uint64 pending_signals;      // Bitmask for pending signals
+  void *signal_handlers[32];   // Array of function pointer to handlers
+  struct trapframe *sig_tf;     // Backup of trapframe to restore after handler
+  int is_handling_signal;      // Re-entrancy guard
 };

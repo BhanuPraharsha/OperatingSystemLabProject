@@ -11,7 +11,7 @@ int pipe(int*);
 int write(int, const void*, int);
 int read(int, void*, int);
 int close(int);
-int kill(int);
+int kill(int, int);
 int exec(const char*, char**);
 int open(const char*, int);
 int mknod(const char*, short, short);
@@ -26,6 +26,8 @@ char* sys_sbrk(int,int);
 int pause(int);
 int uptime(void);
 int psinfo(struct uproc*);
+int signal(int, void(*)(int));
+int sigreturn(void);
 
 // ulib.c
 int stat(const char*, struct stat*);
