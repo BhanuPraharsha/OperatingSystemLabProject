@@ -147,6 +147,111 @@ sys_signal(void){
 }
 
 
+// ---- message queue stuff ----
+
+#define MAX_MSG_SIZE 64
+#define MAX_MSGS     8
+#define NUM_QUEUES   4
+
+struct msg_queue {
+  struct spinlock lock;
+  char msgs[MAX_MSGS][MAX_MSG_SIZE];
+  int head;
+  int tail;
+  int count;
+};
+
+struct msg_queue msgqueues[NUM_QUEUES];
+int msgq_initialized = 0;
+
+// init all queues on first use
+void
+msgq_init(void)
+{
+  for(int i = 0; i < NUM_QUEUES; i++){
+    initlock(&msgqueues[i].lock, "msgq");
+    msgqueues[i].head = 0;
+    msgqueues[i].tail = 0;
+    msgqueues[i].count = 0;
+  }
+  msgq_initialized = 1;
+}
+
+uint64
+sys_msgq_send(void)
+{
+  int qid;
+  uint64 addr;
+
+  if(!msgq_initialized)
+    msgq_init();
+
+  argint(0, &qid);
+  argaddr(1, &addr);
+
+  // check if qid is valid
+  if(qid < 0 || qid >= NUM_QUEUES)
+    return -1;
+
+  struct msg_queue *q = &msgqueues[qid];
+  acquire(&q->lock);
+
+  // queue full
+  if(q->count == MAX_MSGS){
+    release(&q->lock);
+    return -1;
+  }
+
+  // copy message from user space into kernel buffer
+  struct proc *p = myproc();
+  if(copyin(p->pagetable, q->msgs[q->tail], addr, MAX_MSG_SIZE) < 0){
+    release(&q->lock);
+    return -1;
+  }
+
+  q->tail = (q->tail + 1) % MAX_MSGS;
+  q->count++;
+  release(&q->lock);
+  return 0;
+}
+
+uint64
+sys_msgq_recv(void)
+{
+  int qid;
+  uint64 addr;
+
+  if(!msgq_initialized)
+    msgq_init();
+
+  argint(0, &qid);
+  argaddr(1, &addr);
+
+  if(qid < 0 || qid >= NUM_QUEUES)
+    return -1;
+
+  struct msg_queue *q = &msgqueues[qid];
+  acquire(&q->lock);
+
+  // queue empty
+  if(q->count == 0){
+    release(&q->lock);
+    return -1;
+  }
+
+  // copy message from kernel buffer to user space
+  struct proc *p = myproc();
+  if(copyout(p->pagetable, addr, q->msgs[q->head], MAX_MSG_SIZE) < 0){
+    release(&q->lock);
+    return -1;
+  }
+
+  q->head = (q->head + 1) % MAX_MSGS;
+  q->count--;
+  release(&q->lock);
+  return 0;
+}
+
 uint64
 sys_sigreturn(void) {
   struct proc *p = myproc();
