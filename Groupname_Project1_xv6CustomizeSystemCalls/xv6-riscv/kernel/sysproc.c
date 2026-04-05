@@ -263,3 +263,30 @@ sys_sigreturn(void) {
   p->is_handling_signal = 0;
   return p->trapframe->a0;//return the original signal
 }
+
+// [Bhanu] Extract arguments for clone and pass to kclone
+uint64
+sys_clone(void)
+{
+  uint64 fcn, arg, stack;
+
+  // Grab arguments passed from user space
+  if(argaddr(0, &fcn) < 0 || argaddr(1, &arg) < 0 || argaddr(2, &stack) < 0)
+    return -1;
+
+  return kclone(fcn, stack, arg);
+}
+
+// [Bhanu] Extract argument for join and pass to kjoin
+uint64
+sys_join(void)
+{
+  int tid;
+  uint64 status_addr;
+
+  // Grab the thread ID and the status pointer
+  if(argint(0, &tid) < 0 || argaddr(1, &status_addr) < 0)
+    return -1;
+
+  return kjoin(tid, status_addr);
+}
