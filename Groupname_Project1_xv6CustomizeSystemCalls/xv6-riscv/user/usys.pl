@@ -47,3 +47,5 @@ entry("signal");
 entry("sigreturn");
 entry("msgq_send");
 entry("msgq_recv");
+entry("clone");
+entry("join");
