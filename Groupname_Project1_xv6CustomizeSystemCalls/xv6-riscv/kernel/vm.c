@@ -1,12 +1,12 @@
-#include "defs.h"
-#include "elf.h"
-#include "fs.h"
-#include "memlayout.h"
+#include "types.h"
 #include "param.h"
-#include "proc.h"
+#include "memlayout.h"
 #include "riscv.h"
 #include "spinlock.h"
-#include "types.h"
+#include "proc.h"
+#include "defs.h"
+#include "fs.h"
+#include "elf.h"
 
 /*
  * the kernel's page table.

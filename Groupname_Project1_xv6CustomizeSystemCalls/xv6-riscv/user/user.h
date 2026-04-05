@@ -30,6 +30,8 @@ int signal(int, void(*)(int));
 int sigreturn(void);
 int msgq_send(int, char*);
 int msgq_recv(int, char*);
+int clone(void(*)(void*), void*, void*);
+int join(int, void*);
 
 // ulib.c
 int stat(const char*, struct stat*);

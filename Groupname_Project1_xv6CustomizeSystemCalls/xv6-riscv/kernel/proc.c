@@ -1,12 +1,12 @@
+#include "types.h"
+#include "param.h"
+#include "memlayout.h"
+#include "riscv.h"
+#include "spinlock.h"
 #include "proc.h"
 #include "defs.h"
-#include "memlayout.h"
-#include "param.h"
 #include "pstat.h"
-#include "riscv.h"
 #include "signal.h"
-#include "spinlock.h"
-#include "types.h"
 struct cpu cpus[NCPU];
 
 struct proc proc[NPROC];
@@ -700,21 +700,21 @@ int get_psinfo(uint64 addr) {
   return count;
 }
 
-// [Bhanu] Create a new thread sharing the caller's address space.
-// fcn: user-space function pointer to run in the thread.
-// stack: user-allocated stack (PGSIZE-aligned char array).
-// Returns thread pid on success, -1 on failure.
+// create a new thread sharing the caller's address space
+// fcn: user-space function pointer to run in the thread
+// stack: user-allocated stack
+// returns thread pid on success, -1 on failure
 int kclone(uint64 fcn, uint64 stack, uint64 arg) {
   int i, pid;
   struct proc *np;
   struct proc *p = myproc();
 
-  // Allocate process.
+  // allocate process
   if ((np = allocproc()) == 0) {
     return -1;
   }
 
-  // Share user memory from parent to child (thread).
+  // share user memory from parent to thread
   if (uvmshare(p->pagetable, np->pagetable, p->sz) < 0) {
     freeproc(np);
     release(&np->lock);
@@ -722,19 +722,18 @@ int kclone(uint64 fcn, uint64 stack, uint64 arg) {
   }
   np->sz = p->sz;
 
-  // copy saved user registers.
+  // copy saved user registers
   *(np->trapframe) = *(p->trapframe);
 
-  // Set up thread specifics:
   np->trapframe->epc = fcn;
-  np->trapframe->sp = stack + PGSIZE; 
+  np->trapframe->sp = stack + PGSIZE;
   np->trapframe->a0 = arg;
 
-  // Mark as thread
+  // mark as thread
   np->is_thread = 1;
   np->mem_parent = p;
 
-  // increment reference counts on open file descriptors.
+  // increment reference counts on open file descriptors
   for (i = 0; i < NOFILE; i++)
     if (p->ofile[i])
       np->ofile[i] = filedup(p->ofile[i]);
@@ -757,7 +756,7 @@ int kclone(uint64 fcn, uint64 stack, uint64 arg) {
   return pid;
 }
 
-// [Bhanu] Wait for a specific thread to exit.
+// wait for a specific thread to exit
 // tid: thread ID
 // status_addr: where to store the exit status
 int kjoin(int tid, uint64 status_addr) {
@@ -776,8 +775,9 @@ int kjoin(int tid, uint64 status_addr) {
         havekids = 1;
         if (pp->state == ZOMBIE) {
           pid = pp->pid;
-          if (status_addr != 0 && copyout(p->pagetable, status_addr, (char *)&pp->xstate,
-                                   sizeof(pp->xstate)) < 0) {
+          if (status_addr != 0 &&
+              copyout(p->pagetable, status_addr, (char *)&pp->xstate,
+                      sizeof(pp->xstate)) < 0) {
             release(&pp->lock);
             release(&wait_lock);
             return -1;
@@ -796,6 +796,6 @@ int kjoin(int tid, uint64 status_addr) {
       return -1;
     }
 
-    sleep(p, &wait_lock); 
+    sleep(p, &wait_lock);
   }
 }
