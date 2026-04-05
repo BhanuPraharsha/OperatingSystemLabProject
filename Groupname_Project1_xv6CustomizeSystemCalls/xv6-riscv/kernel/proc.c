@@ -699,3 +699,103 @@ int get_psinfo(uint64 addr) {
   }
   return count;
 }
+
+// [Bhanu] Create a new thread sharing the caller's address space.
+// fcn: user-space function pointer to run in the thread.
+// stack: user-allocated stack (PGSIZE-aligned char array).
+// Returns thread pid on success, -1 on failure.
+int kclone(uint64 fcn, uint64 stack, uint64 arg) {
+  int i, pid;
+  struct proc *np;
+  struct proc *p = myproc();
+
+  // Allocate process.
+  if ((np = allocproc()) == 0) {
+    return -1;
+  }
+
+  // Share user memory from parent to child (thread).
+  if (uvmshare(p->pagetable, np->pagetable, p->sz) < 0) {
+    freeproc(np);
+    release(&np->lock);
+    return -1;
+  }
+  np->sz = p->sz;
+
+  // copy saved user registers.
+  *(np->trapframe) = *(p->trapframe);
+
+  // Set up thread specifics:
+  np->trapframe->epc = fcn;
+  np->trapframe->sp = stack + PGSIZE; 
+  np->trapframe->a0 = arg;
+
+  // Mark as thread
+  np->is_thread = 1;
+  np->mem_parent = p;
+
+  // increment reference counts on open file descriptors.
+  for (i = 0; i < NOFILE; i++)
+    if (p->ofile[i])
+      np->ofile[i] = filedup(p->ofile[i]);
+  np->cwd = idup(p->cwd);
+
+  safestrcpy(np->name, p->name, sizeof(p->name));
+
+  pid = np->pid;
+
+  release(&np->lock);
+
+  acquire(&wait_lock);
+  np->parent = p;
+  release(&wait_lock);
+
+  acquire(&np->lock);
+  np->state = RUNNABLE;
+  release(&np->lock);
+
+  return pid;
+}
+
+// [Bhanu] Wait for a specific thread to exit.
+// tid: thread ID
+// status_addr: where to store the exit status
+int kjoin(int tid, uint64 status_addr) {
+  struct proc *pp;
+  int havekids, pid;
+  struct proc *p = myproc();
+
+  acquire(&wait_lock);
+
+  for (;;) {
+    havekids = 0;
+    for (pp = proc; pp < &proc[NPROC]; pp++) {
+      if (pp->parent == p && pp->pid == tid) {
+        acquire(&pp->lock);
+
+        havekids = 1;
+        if (pp->state == ZOMBIE) {
+          pid = pp->pid;
+          if (status_addr != 0 && copyout(p->pagetable, status_addr, (char *)&pp->xstate,
+                                   sizeof(pp->xstate)) < 0) {
+            release(&pp->lock);
+            release(&wait_lock);
+            return -1;
+          }
+          freeproc(pp);
+          release(&pp->lock);
+          release(&wait_lock);
+          return pid;
+        }
+        release(&pp->lock);
+      }
+    }
+
+    if (!havekids || killed(p)) {
+      release(&wait_lock);
+      return -1;
+    }
+
+    sleep(p, &wait_lock); 
+  }
+}
