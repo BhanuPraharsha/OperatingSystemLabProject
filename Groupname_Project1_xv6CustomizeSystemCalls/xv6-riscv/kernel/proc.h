@@ -112,3 +112,4 @@ struct proc {
   int is_thread;               // 1 if this proc is a thread sharing parent's memory
   struct proc *mem_parent;     // process whose page directory we alias (NULL if not a thread)
 };
+// Inside struct proc { ...
