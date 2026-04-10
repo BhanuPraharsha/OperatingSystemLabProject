@@ -108,6 +108,8 @@ extern uint64 sys_msgq_send(void);
 extern uint64 sys_msgq_recv(void);
 extern uint64 sys_clone(void);
 extern uint64 sys_join(void);
+extern uint64 sys_sem_wait(void);
+extern uint64 sys_sem_post(void);
 
 // An array mapping syscall numbers from syscall.h
 // to the function that handles the system call.
@@ -140,6 +142,8 @@ static uint64 (*syscalls[])(void) = {
 [SYS_msgq_recv] sys_msgq_recv,
 [SYS_clone]   sys_clone,
 [SYS_join]    sys_join,
+[SYS_sem_wait] sys_sem_wait,
+[SYS_sem_post] sys_sem_post,
 };
 
 void

@@ -49,3 +49,5 @@ entry("msgq_send");
 entry("msgq_recv");
 entry("clone");
 entry("join");
+entry("sem_wait");
+entry("sem_post");
