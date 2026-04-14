@@ -205,7 +205,7 @@ sys_getcwd(void)
 
     if (parent == 0)
     {
-      iunlockput(cur); // shouldn't happen
+      iput(cur); // cur already unlocked above
       return -1;
     }
 

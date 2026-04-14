@@ -32,9 +32,10 @@ int msgq_send(int, char *);
 int msgq_recv(int, char *);
 int clone(void (*)(void *), void *, void *);
 int join(int, void *);
-char *getcwd(char *, int);
+
 int sem_wait(int);
 int sem_post(int);
+char *getcwd(char *, int);
 
 // ulib.c
 int stat(const char *, struct stat *);

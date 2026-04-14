@@ -150,7 +150,7 @@ UPROGS=\
 	$U/_msgqtest\
 	$U/_threadtest\
 	$U/_semtest\
-	$U/_thread_test_ayush\
+	$U/_thrtest_ayush\
 	$U/_pwd 
 
 fs.img: mkfs/mkfs README $(UPROGS)
