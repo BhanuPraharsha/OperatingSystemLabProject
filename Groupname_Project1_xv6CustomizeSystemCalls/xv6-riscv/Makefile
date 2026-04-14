@@ -149,6 +149,7 @@ UPROGS=\
 	$U/_test_signal\
 	$U/_msgqtest\
 	$U/_threadtest\
+	$U/_semtest\
 	$U/_thread_test_ayush\
 	$U/_pwd 
 

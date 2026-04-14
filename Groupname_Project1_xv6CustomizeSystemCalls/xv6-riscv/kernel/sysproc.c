@@ -7,9 +7,28 @@
 #include "proc.h"
 #include "signal.h"
 #include "vm.h"
-#include "proc.h"
-#include "fs.h"
-#include "file.h"
+
+// ---- semaphore stuff ----
+
+// this struct holds one semaphore
+// lock is used to protect the count variable
+// count keeps track of how many resources are available
+struct sem {
+  struct spinlock lock;
+  int count;
+};
+
+// we have 10 semaphores that any process can use
+struct sem semtable[10];
+
+// this function sets up all 10 semaphores
+// called once when the kernel boots up (from main.c)
+void seminit(void) {
+  for (int i = 0; i < 10; i++) {
+    initlock(&semtable[i].lock, "sem");
+    semtable[i].count = 1;  // start with count 1 (binary semaphore)
+  }
+}
 
 uint64 sys_exit(void)
 {
@@ -285,68 +304,53 @@ uint64 sys_join(void)
   return kjoin(tid, status_addr);
 }
 
-uint64
-sys_getcwd(void)
-{
-  char buf[512];
-  char temp[512];
-  struct inode *ip, *parent;
-  struct dirent de;
+// sys_sem_wait - this is called when a process wants to use a shared resource
+// if the semaphore count is 0 or less, the process will go to sleep
+// when it wakes up (or if count > 0), it decrements the count and continues
+uint64 sys_sem_wait(void) {
+  int id;
 
-  struct proc *p = myproc();
-  ip = idup(p->cwd);
+  // get the semaphore id from user space
+  argint(0, &id);
 
-  if (ip->inum == ROOTINO)
-  {
-    safestrcpy(buf, "/", sizeof(buf));
-  }
-  else
-  {
-    buf[0] = '\0';
-
-    while (1)
-    {
-      ilock(ip);
-
-      if (ip->inum == ROOTINO)
-      {
-        iunlock(ip);
-        break;
-      }
-
-      // get parent
-      parent = dirlookup(ip, "..", 0);
-      ilock(parent);
-
-      // find name in parent
-      int off;
-      for (off = 0; off < parent->size; off += sizeof(de))
-      {
-        if (readi(parent, 0, (uint64)&de, off, sizeof(de)) != sizeof(de))
-          panic("readi");
-
-        if (de.inum == ip->inum)
-        {
-          // prepend name
-          memmove(temp, buf, sizeof(buf));
-          snprintf(buf, sizeof(buf), "/%s%s", de.name, temp);
-          break;
-        }
-      }
-
-      iunlockput(ip);
-      ip = parent;
-      iunlock(ip);
-    }
-  }
-
-  // copy to user space
-  uint64 addr;
-  if (argaddr(0, &addr) < 0)
+  // check if the id is valid
+  if (id < 0 || id >= 10)
     return -1;
 
-  if (copyout(p->pagetable, addr, buf, strlen(buf) + 1) < 0)
-    return -1;
+  acquire(&semtable[id].lock);
 
+  // if no resources available, sleep until someone does sem_post
+  while (semtable[id].count <= 0) {
+    sleep(&semtable[id], &semtable[id].lock);
+  }
+
+  // now we got the resource, so decrease the count
+  semtable[id].count--;
+
+  release(&semtable[id].lock);
   return 0;
+}
+
+// sys_sem_post - this is called when a process is done with a shared resource
+// it increments the count and wakes up any sleeping process
+uint64 sys_sem_post(void) {
+  int id;
+
+  // get the semaphore id from user space
+  argint(0, &id);
+
+  // check if the id is valid
+  if (id < 0 || id >= 10)
+    return -1;
+
+  acquire(&semtable[id].lock);
+
+  // increase the count because we are releasing the resource
+  semtable[id].count++;
+
+  // wake up any process that was waiting for this semaphore
+  wakeup(&semtable[id]);
+
+  release(&semtable[id].lock);
+    return 0;
 }
