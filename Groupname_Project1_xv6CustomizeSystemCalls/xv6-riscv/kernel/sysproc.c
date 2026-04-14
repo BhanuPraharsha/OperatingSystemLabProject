@@ -29,9 +29,6 @@ void seminit(void) {
     semtable[i].count = 1;  // start with count 1 (binary semaphore)
   }
 }
-#include "proc.h"
-#include "fs.h"
-#include "file.h"
 
 uint64 sys_exit(void)
 {
@@ -355,71 +352,5 @@ uint64 sys_sem_post(void) {
   wakeup(&semtable[id]);
 
   release(&semtable[id].lock);
-  return 0;
-}
-
-uint64
-sys_getcwd(void)
-{
-  char buf[512];
-  char temp[512];
-  struct inode *ip, *parent;
-  struct dirent de;
-
-  struct proc *p = myproc();
-  ip = idup(p->cwd);
-
-  if (ip->inum == ROOTINO)
-  {
-    safestrcpy(buf, "/", sizeof(buf));
-  }
-  else
-  {
-    buf[0] = '\0';
-
-    while (1)
-    {
-      ilock(ip);
-
-      if (ip->inum == ROOTINO)
-      {
-        iunlock(ip);
-        break;
-      }
-
-      // get parent
-      parent = dirlookup(ip, "..", 0);
-      ilock(parent);
-
-      // find name in parent
-      int off;
-      for (off = 0; off < parent->size; off += sizeof(de))
-      {
-        if (readi(parent, 0, (uint64)&de, off, sizeof(de)) != sizeof(de))
-          panic("readi");
-
-        if (de.inum == ip->inum)
-        {
-          // prepend name
-          memmove(temp, buf, sizeof(buf));
-          snprintf(buf, sizeof(buf), "/%s%s", de.name, temp);
-          break;
-        }
-      }
-
-      iunlockput(ip);
-      ip = parent;
-      iunlock(ip);
-    }
-  }
-
-  // copy to user space
-  uint64 addr;
-  if (argaddr(0, &addr) < 0)
-    return -1;
-
-  if (copyout(p->pagetable, addr, buf, strlen(buf) + 1) < 0)
-    return -1;
-
-  return 0;
+    return 0;
 }

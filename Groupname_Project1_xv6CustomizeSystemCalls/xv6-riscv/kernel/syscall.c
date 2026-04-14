@@ -6,6 +6,10 @@
 #include "proc.h"
 #include "syscall.h"
 #include "defs.h"
+#include "stat.h"
+#include "sleeplock.h"
+#include "fs.h"
+#include "file.h"
 
 // Fetch the uint64 at addr from the current process.
 int fetchaddr(uint64 addr, uint64 *ip)

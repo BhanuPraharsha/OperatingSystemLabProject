@@ -32,7 +32,7 @@ int msgq_send(int, char *);
 int msgq_recv(int, char *);
 int clone(void (*)(void *), void *, void *);
 int join(int, void *);
-int getcwd(char *);
+char *getcwd(char *, int);
 int sem_wait(int);
 int sem_post(int);
 
@@ -50,8 +50,6 @@ int memcmp(const void *, const void *, uint);
 void *memcpy(void *, const void *, uint);
 char *sbrk(int);
 char *sbrklazy(int);
-char *getcwd(char *, int);
-
 // printf.c
 void fprintf(int, const char *, ...) __attribute__((format(printf, 2, 3)));
 void printf(const char *, ...) __attribute__((format(printf, 1, 2)));
