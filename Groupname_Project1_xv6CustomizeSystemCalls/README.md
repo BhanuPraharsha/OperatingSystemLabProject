@@ -273,8 +273,8 @@ make qemu
 | # | Syscall | Number | Category | Author |
 |---|---------|--------|----------|--------|
 | 1 | `psinfo` | 22 | System Diagnostics | Aryan |
-| 2 | `signal` | 23 | Signal Handling | Team |
-| 3 | `sigreturn` | 24 | Signal Handling | Team |
+| 2 | `signal` | 23 | Signal Handling | Aryan |
+| 3 | `sigreturn` | 24 | Signal Handling | Aryan |
 | 4 | `msgq_send` | 25 | IPC | Shajith |
 | 5 | `msgq_recv` | 26 | IPC | Shajith |
 | 6 | `clone` | 27 | Threads | Bhanu |
@@ -290,6 +290,6 @@ make qemu
 | Shajith | `msgq_send` / `msgq_recv` (Message Queue IPC) | `sysproc.c`, `msgqtest.c` |
 | Ayush | `thread_create` / `thread_join` (Thread system + test program) | `threadtest.c`, thread architecture |
 | Bhanu | `clone` / `join` (Kernel-level thread with page table sharing) | `proc.c`, `proc.h`, `vm.c` |
-| Aryan | `psinfo` (Process Diagnostics) | `proc.c`, `pstat.h`, `ps.c` |
+| Aryan | `psinfo` (Process Diagnostics), `signals` | `proc.c`, `pstat.h`, `ps.c`, `signals.h`, `proc.h` |
 | Vijay | `sem_wait` / `sem_post` (Counting Semaphores) | Semaphore design |
 | Manjula | `getcwd` (Current Working Directory) | `syscall.c`, `sysproc.c`, `pwd.c` |
