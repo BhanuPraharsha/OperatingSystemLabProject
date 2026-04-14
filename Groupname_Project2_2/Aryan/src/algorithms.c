@@ -2,23 +2,8 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include "types.h"
+#include "stats.h"
 
-//helper function - gantt chart
-
-void print_gantt_chart(int time, CPU cpus[], int num_cpus, Process processes[]) {
-    printf("%02d\t", time);
-    for(int i=0; i<num_cpus; i++) {
-        if(cpus[i].current_process_id!=-1){
-            printf("[P%d]\t", processes[cpus[i].current_process_id].id);
-
-        }
-        else{
-            printf("[--]\t");
-        }
-    }
-
-    printf("\n");
-}
 
 // algorithm 1: Custom Multiprocessor Round Robin (GLobal Ready Queue)
 
@@ -31,7 +16,7 @@ void run_custom_rr(Process processes[], int num_processes, int num_cpus) {
 
     }
 
-    printf("\n---------------------------------\n");
+    printf("\n--------------------------------------\n");
 
     CPU cpus[num_cpus];
     for(int i =0; i<num_cpus; i++) {
@@ -102,7 +87,7 @@ void run_edf(Process processes[], int num_processes, int num_cpus){
         printf("CPU %d\t", c);
 
     }
-    printf("\n-----------------------------\n");
+    printf("\n----------------------------------------\n");
 
     CPU cpus[num_cpus];
     for(int i=0; i<num_cpus; i++){
@@ -181,7 +166,7 @@ void run_mlfq(Process processes[], int num_processes, int num_cpu){
         printf("CPU %d\t", c);
 
     }
-    printf("\n--------------------------------\n");
+    printf("\n------------------------------------------\n");
 
     CPU cpus[num_cpu];
     for(int i=0; i<num_cpu; i++){
