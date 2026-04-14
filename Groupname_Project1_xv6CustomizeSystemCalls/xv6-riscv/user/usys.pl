@@ -51,3 +51,4 @@ entry("clone");
 entry("join");
 entry("sem_wait");
 entry("sem_post");
+entry("getcwd");

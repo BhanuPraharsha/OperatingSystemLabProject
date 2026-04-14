@@ -141,6 +141,7 @@ void syscall();
 
 // sysproc.c
 void seminit(void);
+uint64 sys_getcwd(void);
 
 // trap.c
 extern uint ticks;
