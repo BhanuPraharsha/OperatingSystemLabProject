@@ -40,6 +40,14 @@ Each team member built standalone C programs that **simulate CPU scheduling algo
 
 **Implemented by:** Bhanu, Aryan, Manjula
 
+### Custom Round Robin (RR)
+- Symmetric multiprocessor approach using a global ready queue
+- Each process is assigned a fixed time quantum for execution
+- If a process exhausts its quantum without finishing, it is preempted and moved back to the ready queue
+- Idle CPUs continuously pull the next available task, preventing processor affinity issues and ensuring load balancing
+
+**Implemented by:** Aryan
+
 ---
 
 ## Project Structure
