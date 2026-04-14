@@ -29,4 +29,4 @@
 #define SYS_join 28
 #define SYS_sem_wait 29
 #define SYS_sem_post 30
-#define SYS_getcwd 29
+#define SYS_getcwd 31
