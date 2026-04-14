@@ -48,49 +48,6 @@ child: got message -> hello from parent!
 
 Ayush designed and implemented the thread creation mechanism for xv6. The task was to build a syscall that creates a new thread of execution within the same process. To avoid memory management complexity, the user program allocates the stack space using standard arrays/malloc and passes the pointer to the kernel. The kernel then sets up the trapframe — specifically the program counter and stack pointer — so the new thread starts executing the given function concurrently while sharing the parent's memory.
 
-**How it works:**
-- The user program allocates a stack via `malloc(4096)` and passes it along with a function pointer to `thread_create`
-- The kernel sets up a new process entry that shares the parent's address space
-- The program counter (`epc`) is pointed at the user function, and the stack pointer (`sp`) is set to the top of the user-allocated stack
-- `thread_join` blocks the caller until the specified thread exits
-- The `threadtest.c` user program demonstrates this: a parent spawns a thread that increments a shared global variable, proving both execution contexts share the same memory
-
-**Test Program — `threadtest.c`:**
-```c
-// shared global variable
-int shared_counter = 0;
-
-void thread_func(void *arg) {
-  int id = *(int *)arg;
-  printf("Thread %d started.\n", id);
-  shared_counter += 100;
-  printf("Thread %d incremented shared_counter to %d.\n", id, shared_counter);
-  exit(0);
-}
-
-int main() {
-  void *stack = malloc(4096);
-  int arg = 1;
-  int tid = clone(thread_func, &arg, stack);
-  int join_status;
-  int ret_tid = join(tid, &join_status);
-  printf("Parent: Final shared_counter is %d (should be 100)\n", shared_counter);
-  // TEST PASSED if shared_counter == 100
-}
-```
-
-**Test Output:**
-```
-$ threadtest
-Parent: shared_counter is 0
-Thread 1 started.
-Thread 1 incremented shared_counter to 100.
-Parent: spawned thread with tid 4
-Parent: successfully joined thread 4
-Parent: Final shared_counter is 100 (should be 100)
-TEST PASSED
-```
-
 ---
 
 ### 3. `clone` & `join` — Thread Creation with Shared Page Tables *(Bhanu)*
@@ -116,6 +73,20 @@ Bhanu implemented the kernel-level mechanics for `clone` and `join`. Unlike `for
 | `kernel/sysproc.c` | `sys_clone()`, `sys_join()` |
 | `user/threadtest.c` | Test program (NEW) |
 
+**How it works:**
+- The `threadtest.c` user program demonstrates this: a parent spawns a thread using clone function, that increments a shared global variable, proving both execution contexts share the same memory
+
+**Test Output:**
+```
+$ threadtest
+Parent: shared_counter is 0
+Thread 1 started.
+Thread 1 incremented shared_counter to 100.
+Parent: spawned thread with tid 4
+Parent: successfully joined thread 4
+Parent: Final shared_counter is 100 (should be 100)
+TEST PASSED
+```
 ---
 
 ### 4. `sem_wait` & `sem_post` — Counting Semaphores *(Vijay)*
