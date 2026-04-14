@@ -108,4 +108,8 @@ struct proc {
   void *signal_handlers[32];   // Array of function pointer to handlers
   struct trapframe *sig_tf;     // Backup of trapframe to restore after handler
   int is_handling_signal;      // Re-entrancy guard
+  // [Bhanu] clone & join (Threads)
+  int is_thread;               // 1 if this proc is a thread sharing parent's memory
+  struct proc *mem_parent;     // process whose page directory we alias (NULL if not a thread)
 };
+// Inside struct proc { ...

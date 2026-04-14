@@ -148,6 +148,8 @@ UPROGS=\
 	$U/_ps\
 	$U/_test_signal\
 	$U/_msgqtest\
+	$U/_threadtest\
+	$U/_pwd 
 
 fs.img: mkfs/mkfs README $(UPROGS)
 	mkfs/mkfs fs.img README $(UPROGS)
