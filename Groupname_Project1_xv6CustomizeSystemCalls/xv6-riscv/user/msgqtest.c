@@ -23,21 +23,17 @@ int main(int argc, char *argv[])
     memset(sendbuf, 0, sizeof(sendbuf));
     strcpy(sendbuf, msg);
 
+    printf("parent: sent message\n");
     if(msgq_send(0, sendbuf) < 0){
       printf("msgq_send failed\n");
       exit(1);
     }
-    printf("parent: sent message\n");
     wait(0);
   } else {
     // child receives from queue 0
-    // small delay so parent sends first
-    for(int i = 0; i < 100000; i++)
-      ;
-
-    if(msgq_recv(0, buf) < 0){
-      printf("msgq_recv failed\n");
-      exit(1);
+    // poll until we receive the message
+    while(msgq_recv(0, buf) < 0) {
+      pause(1);
     }
     printf("child: got message -> %s\n", buf);
   }
