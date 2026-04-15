@@ -1,80 +1,10 @@
-# Project 1: xv6 Customized System Calls - Semaphore Implementation
-
-## Overview
-This section of the project focuses on adding **Semaphore system calls** (`sem_wait` and `sem_post`) to the xv6 operating system kernel, along with a user-space test program (`semtest`) to verify their functionality. Semaphores are synchronization primitives that help manage concurrent processes and prevent race conditions when accessing shared resources.
-
-## Changes Made for Semaphore Portion
-
-The following files were modified and added to implement the semaphore functionality:
-
-### 1. `kernel/sysproc.c`
-This file contains the core logic for the semaphore system calls.
-* **`struct sem` & `semtable`**: Created a semaphore structure containing a spinlock and a count variable. An array of 10 semaphores (`semtable[10]`) was added to allow multiple user processes to use semaphores globally.
-* **`seminit(void)`**: A function to initialize the 10 semaphores as binary semaphores (initial count = 1) and initialize their spinlocks. This is designed to be called when the kernel boots up.
-* **`sys_sem_wait(void)`**: Implements the logic to acquire a semaphore resource. If the semaphore count is `0` or less, the calling process goes to sleep using XV6's `sleep()` mechanism. Once acquired, the count is decremented.
-* **`sys_sem_post(void)`**: Implements the logic to release a semaphore resource. It increments the semaphore count and uses `wakeup()` to awaken any processes that went to sleep waiting for this specific semaphore.
-
-### 2. Kernel and System Call wiring (Typical XV6 flow)
-To make `sem_wait` and `sem_post` accessible to user programs, they were wired into the kernel:
-* **`kernel/syscall.h`**: Defined the system call numbers (e.g., `SYS_sem_wait` and `SYS_sem_post`).
-* **`kernel/syscall.c`**: Added the function pointers to the `syscalls` array to route the user requests to `sys_sem_wait` and `sys_sem_post`.
-* **`user/usys.pl`**: Added stubs so that the user-space assembly code for system calls is automatically generated.
-* **`user/user.h`**: Added the C function prototypes `int sem_wait(int);` and `int sem_post(int);` so user programs can call them.
-
-### 3. `user/semtest.c` (New File)
-A user-level test program was created to demonstrate mutual exclusion.
-* The program calls `fork()` to create a parent and a child process.
-* Both processes attempt to enter a "critical section" where they print a message.
-* `sem_wait(0)` and `sem_post(0)` are used around the print statements to guarantee that the parent and child do not execute the print statements simultaneously, ensuring mutual exclusion lock over the terminal output.
-
-### 4. `Makefile`
-* Appended `$U/_semtest` to the `UPROGS` section so that the `semtest` program compiles into the xv6 file system when running `make qemu`.
-
----
-
-## How to Test and Verify
-
-To verify that the semaphores work correctly, run the OS and execute the test program on the xv6 terminal.
-
-1. Open your terminal in the `xv6-riscv` folder.
-2. Compile and boot the xv6 testing environment by running:
-   ```bash
-   make qemu
-   ```
-3. Once xv6 boots up and you see the `$` prompt, type the following command to run your test:
-   ```bash
-   semtest
-   ```
-
-### Expected Output
-Because the semaphores enforce mutual exclusion, the parent and child processes will print one after another without mixing their outputs. You should see output similar to this:
-
-```text
-$ semtest
-semaphore test starting...
-child: inside critical section
-parent: inside critical section
-semaphore test done!
-```
-*(Note: The order of "child" vs "parent" might swap depending on CPU scheduling, but they will never print on top of each other).*
-
-4. To exit the xv6 QEMU environment, press `Ctrl-A` followed by `X`.
-
----
-
-## Explanation for Presentation / Others
-When explaining your portion to others, you can highlight the following points:
-1. **The Goal**: Normal processes are unaware of each other and can cause data corruption if they access shared resources simultaneously. My contribution was to introduce **Semaphores**, a fundamental OS tool to prevent this.
-2. **The Implementation**: I integrated an array of 10 binary semaphores directly into the xv6 kernel memory space. I had to use kernel-level **spinlocks** (`acquire` and `release`) inside the semaphore logic to prevent the semaphores themselves from race conditions during multi-core CPU execution.
-3. **Wait & Sleep**: I utilized xv6's `sleep()` and `wakeup()` kernel API inside `sys_sem_wait` and `sys_sem_post` so that processes waiting for a lock don't waste CPU cycles (busy waiting), but rather securely pause execution until signaled.
-4. **Validation**: I designed `semtest.c` to deliberately spawn a child process constraint against a parent process to battle for the same console write permission. The clean sequential printout validates the successful lock and release pipeline.
 # Project 1 — Custom System Calls in xv6 RISC-V
 
 ## Overview
 
-This project extends the xv6 operating system (RISC-V) with **8 new system calls**. Each team member picked a different OS concept and implemented it as a working kernel-level system call — modifying the kernel source code, registering new syscall numbers, adding data structures to the process control block, and wiring everything through the trap/dispatch pipeline.
+This project extends the xv6 operating system (RISC-V) with **10 new system calls**. Each team member picked a different OS concept and implemented it as a working kernel-level system call — modifying the kernel source code, registering new syscall numbers, adding data structures to the process control block, and wiring everything through the trap/dispatch pipeline.
 
-The original xv6 has 21 system calls. We brought it up to **29**.
+The original xv6 has 21 system calls. We brought it up to **31**.
 
 ---
 
@@ -161,13 +91,39 @@ TEST PASSED
 
 ### 4. `sem_wait` & `sem_post` — Counting Semaphores *(Vijay)*
 
-Vijay implemented counting semaphores for process synchronization in xv6. `sem_wait` decrements the semaphore counter and puts the process to sleep if the count drops below zero. `sem_post` increments the counter and wakes up any sleeping processes. The implementation handles CPU yielding and process state transitions to prevent race conditions.
+**Syscall Numbers:** 30, 31
 
-**Design Principles:**
-- Standard counting semaphore semantics — `wait` (P operation) and `post` (V operation)
-- Uses xv6's `sleep()` and `wakeup()` primitives for blocking/unblocking
-- Spinlock protection around the semaphore counter to prevent race conditions
-- Processes are put into `SLEEPING` state when the semaphore count is zero
+Vijay implemented counting semaphores for process synchronization in xv6. Semaphores are fundamental synchronization primitives that help manage concurrent processes and prevent race conditions when accessing shared resources.
+
+**Internal Design:**
+- Created a `struct sem` containing a spinlock and a count variable
+- An array of **10 semaphores** (`semtable[10]`) provides globally accessible semaphores for user processes
+- `seminit()` initializes all semaphores as binary semaphores (initial count = 1) with their spinlocks
+- `sys_sem_wait()` acquires a semaphore — if count is ≤ 0, the process sleeps via xv6's `sleep()` mechanism; once available, count is decremented
+- `sys_sem_post()` releases a semaphore — increments count and calls `wakeup()` to wake any sleeping processes
+- Uses kernel-level spinlocks (`acquire`/`release`) inside the semaphore logic to prevent race conditions during multi-core execution
+
+**Files Modified:**
+| File | Changes |
+|------|---------|
+| `kernel/sysproc.c` | `struct sem`, `semtable[]`, `seminit()`, `sys_sem_wait()`, `sys_sem_post()` |
+| `kernel/syscall.h` | Syscall numbers 30, 31 |
+| `kernel/syscall.c` | Dispatch table entries |
+| `user/user.h` | Function prototypes `int sem_wait(int)`, `int sem_post(int)` |
+| `user/usys.pl` | Stub generation |
+| `user/semtest.c` | Test program (NEW) |
+| `Makefile` | Added `_semtest` to UPROGS |
+
+**Test Output:**
+```
+$ semtest
+semaphore test starting...
+child: inside critical section
+parent: inside critical section
+semaphore test done!
+```
+
+> **Note:** The order of "child" vs "parent" may vary depending on CPU scheduling, but mutual exclusion ensures they never print simultaneously.
 
 ---
 
@@ -258,7 +214,6 @@ xv6 doesn't have a built-in `pwd` command. This syscall traverses the file syste
 | File | Changes |
 |------|---------|
 | `kernel/syscall.c` | `sys_getcwd()` implementation |
-| `kernel/sysproc.c` | Alternative `sys_getcwd()` implementation |
 | `user/pwd.c` | User program (NEW) |
 
 **Test Output:**
@@ -279,11 +234,11 @@ $ pwd
 Groupname_Project1_xv6CustomizeSystemCalls/
 ├── xv6-riscv/
 │   ├── kernel/
-│   │   ├── sysproc.c        ← Syscall implementations (msgq, signal, clone, getcwd)
+│   │   ├── sysproc.c        ← Syscall implementations (msgq, signal, clone, semaphores)
 │   │   ├── proc.c           ← kclone, kjoin, get_psinfo, modified kkill
 │   │   ├── proc.h           ← Signal + thread fields added to struct proc
 │   │   ├── trap.c           ← Signal delivery logic in usertrap()
-│   │   ├── syscall.h        ← Syscall number definitions (22–29)
+│   │   ├── syscall.h        ← Syscall number definitions (22–31)
 │   │   ├── syscall.c        ← Dispatch table + getcwd implementation
 │   │   ├── signal.h         ← Signal constants (NEW)
 │   │   ├── pstat.h          ← struct uproc for psinfo (NEW)
@@ -291,7 +246,9 @@ Groupname_Project1_xv6CustomizeSystemCalls/
 │   │   └── ...
 │   ├── user/
 │   │   ├── msgqtest.c       ← Message queue test (Shajith)
-│   │   ├── threadtest.c     ← Thread test (Ayush & Bhanu)
+│   │   ├── threadtest.c     ← Thread test (Bhanu)
+│   │   ├── thrtest_ayush.c  ← Thread test (Ayush)
+│   │   ├── semtest.c        ← Semaphore test (Vijay)
 │   │   ├── test_signal.c    ← Signal handling test
 │   │   ├── ps.c             ← psinfo user program (Aryan)
 │   │   ├── pwd.c            ← getcwd user program (Manjula)
@@ -325,7 +282,9 @@ make qemu
 ```bash
 $ ps              # Process table diagnostics
 $ msgqtest        # Message queue IPC
-$ threadtest      # Thread creation and shared memory
+$ threadtest      # Thread creation and shared memory (Bhanu)
+$ thrtest_ayush   # Thread creation test (Ayush)
+$ semtest         # Semaphore mutual exclusion
 $ test_signal     # Signal handling
 $ pwd             # Print working directory
 ```
@@ -350,6 +309,8 @@ make qemu
 | 6 | `clone` | 27 | Threads | Bhanu |
 | 7 | `join` | 28 | Threads | Bhanu |
 | 8 | `getcwd` | 29 | File System | Manjula |
+| 9 | `sem_wait` | 30 | Synchronization | Vijay |
+| 10 | `sem_post` | 31 | Synchronization | Vijay |
 
 ---
 
@@ -358,8 +319,8 @@ make qemu
 | Member | Syscall Work | Key Files |
 |--------|-------------|-----------|
 | Shajith | `msgq_send` / `msgq_recv` (Message Queue IPC) | `sysproc.c`, `msgqtest.c` |
-| Ayush | `thread_create` / `thread_join` (Thread system + test program) | `threadtest.c`, thread architecture |
+| Ayush | `thread_create` / `thread_join` (Thread system + test program) | `thrtest_ayush.c`, thread architecture |
 | Bhanu | `clone` / `join` (Kernel-level thread with page table sharing) | `proc.c`, `proc.h`, `vm.c` |
-| Aryan | `psinfo` (Process Diagnostics), `signals` | `proc.c`, `pstat.h`, `ps.c`, `signals.h`, `proc.h` |
-| Vijay | `sem_wait` / `sem_post` (Counting Semaphores) | Semaphore design |
-| Manjula | `getcwd` (Current Working Directory) | `syscall.c`, `sysproc.c`, `pwd.c` |
+| Aryan | `psinfo` (Process Diagnostics), `signals` | `proc.c`, `pstat.h`, `ps.c`, `signal.h`, `proc.h` |
+| Vijay | `sem_wait` / `sem_post` (Counting Semaphores) | `sysproc.c`, `semtest.c` |
+| Manjula | `getcwd` (Current Working Directory) | `syscall.c`, `pwd.c` |
