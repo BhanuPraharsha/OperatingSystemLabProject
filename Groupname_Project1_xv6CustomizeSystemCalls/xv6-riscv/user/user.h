@@ -36,6 +36,8 @@ int join(int, void *);
 int sem_wait(int);
 int sem_post(int);
 char *getcwd(char *, int);
+int thread_create(void (*)(void *), void *, void *);
+int thread_join(int);
 
 // ulib.c
 int stat(const char *, struct stat *);

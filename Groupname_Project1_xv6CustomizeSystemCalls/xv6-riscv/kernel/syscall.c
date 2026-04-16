@@ -111,6 +111,8 @@ extern uint64 sys_join(void);
 extern uint64 sys_sem_wait(void);
 extern uint64 sys_sem_post(void);
 extern uint64 sys_getcwd(void);
+extern uint64 sys_thread_create(void);
+extern uint64 sys_thread_join(void);
 
 // An array mapping syscall numbers from syscall.h
 // to the function that handles the system call.
@@ -146,6 +148,8 @@ static uint64 (*syscalls[])(void) = {
 [SYS_sem_wait] sys_sem_wait,
 [SYS_sem_post] sys_sem_post,
     [SYS_getcwd] sys_getcwd,
+    [SYS_thread_create] sys_thread_create,
+    [SYS_thread_join] sys_thread_join,
 };
 
 void syscall(void)

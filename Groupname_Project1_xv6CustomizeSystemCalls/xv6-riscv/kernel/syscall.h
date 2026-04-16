@@ -30,3 +30,5 @@
 #define SYS_sem_wait 29
 #define SYS_sem_post 30
 #define SYS_getcwd 31
+#define SYS_thread_create 32
+#define SYS_thread_join 33
