@@ -354,3 +354,40 @@ uint64 sys_sem_post(void) {
   release(&semtable[id].lock);
     return 0;
 }
+
+// ---- Ayush's thread_create / thread_join ----
+//
+// thread_create: creates a new thread sharing the caller's address
+// space.  The user program allocates the stack (a simple char array)
+// and passes the pointer.  The kernel sets up the trapframe so the
+// thread starts executing at the given function.
+//
+// Arguments:  a0 = function pointer (void (*fn)(void *))
+//             a1 = argument pointer (void *arg)
+//             a2 = user-allocated stack base (void *stack)
+//
+// Returns thread's PID on success, -1 on failure.
+
+uint64 sys_thread_create(void) {
+  uint64 fcn, arg, stack;
+
+  argaddr(0, &fcn);    // function to execute
+  argaddr(1, &arg);    // argument to pass
+  argaddr(2, &stack);  // user-allocated stack
+
+  return kclone(fcn, stack, arg);
+}
+
+// thread_join: waits for a thread (identified by tid) to exit.
+//
+// Arguments:  a0 = thread ID (int tid)
+//
+// Returns the thread's PID on success, -1 on failure.
+
+uint64 sys_thread_join(void) {
+  int tid;
+
+  argint(0, &tid);
+
+  return kjoin(tid, 0);  // no status pointer needed
+}

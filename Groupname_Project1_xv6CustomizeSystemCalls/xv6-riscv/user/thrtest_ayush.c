@@ -3,18 +3,21 @@
 #include "user/user.h"
 
 // ============================================================
-// Ayush's thread_create / thread_join API
+// Ayush's thread_create / thread_join system calls
 //
-// These wrapper functions provide a cleaner interface on top
-// of the raw clone() and join() system calls implemented by
-// Bhanu.  thread_create() allocates a stack internally and
-// invokes clone(); thread_join() waits for the thread and
-// frees its stack.
+// These are now REAL system calls (SYS_thread_create = 32,
+// SYS_thread_join = 33).  The kernel extracts the function
+// pointer, argument, and stack from the trapframe registers,
+// then sets up a new thread sharing the parent's address space.
+//
+// The user is responsible for allocating and freeing the stack.
+// We maintain a small bookkeeping table here so we can free
+// the correct stack after thread_join returns.
 // ============================================================
 
 #define STACK_SIZE 4096
 
-// Simple bookkeeping so thread_join can free the right stack.
+// Simple bookkeeping so we can free the right stack.
 // We support up to 8 concurrent threads in this test.
 #define MAX_THREADS 8
 
@@ -26,24 +29,24 @@ struct thread_info {
 static struct thread_info threads[MAX_THREADS];
 static int nthreads = 0;
 
-// thread_create  — Ayush's API
-// Creates a new thread running `fn(arg)`.
+// create_thread  — allocates a stack and calls the thread_create syscall
 // Returns the thread-id (pid) on success, -1 on failure.
 int
-thread_create(void (*fn)(void *), void *arg)
+create_thread(void (*fn)(void *), void *arg)
 {
   // allocate a page-aligned stack for the child thread
   void *stack = malloc(STACK_SIZE);
   if (stack == 0)
     return -1;
 
-  int tid = clone(fn, arg, stack);
+  // call the REAL thread_create syscall (SYS_thread_create = 32)
+  int tid = thread_create(fn, arg, stack);
   if (tid < 0) {
     free(stack);
     return -1;
   }
 
-  // remember the mapping so thread_join can free() the stack
+  // remember the mapping so we can free() the stack after join
   if (nthreads < MAX_THREADS) {
     threads[nthreads].tid   = tid;
     threads[nthreads].stack = stack;
@@ -53,16 +56,15 @@ thread_create(void (*fn)(void *), void *arg)
   return tid;
 }
 
-// thread_join  — Ayush's API
-// Waits for the thread identified by `tid` to exit.
+// join_thread  — calls the thread_join syscall and frees the stack
 // Returns the tid on success, -1 on failure.
 int
-thread_join(int tid)
+join_thread(int tid)
 {
-  int status;
-  int ret = join(tid, &status);
+  // call the REAL thread_join syscall (SYS_thread_join = 33)
+  int ret = thread_join(tid);
 
-  // free the stack we allocated in thread_create
+  // free the stack we allocated in create_thread
   for (int i = 0; i < nthreads; i++) {
     if (threads[i].tid == tid) {
       free(threads[i].stack);
@@ -101,16 +103,16 @@ test_basic(void)
   shared_var = 0;
   int arg = 1;
 
-  int tid = thread_create(worker_basic, &arg);
+  int tid = create_thread(worker_basic, &arg);
   if (tid < 0) {
-    printf("FAIL: thread_create returned %d\n", tid);
+    printf("FAIL: create_thread returned %d\n", tid);
     exit(1);
   }
   printf("Parent: created thread tid=%d\n", tid);
 
-  int ret = thread_join(tid);
+  int ret = join_thread(tid);
   if (ret != tid) {
-    printf("FAIL: thread_join returned %d, expected %d\n", ret, tid);
+    printf("FAIL: join_thread returned %d, expected %d\n", ret, tid);
     exit(1);
   }
 
@@ -143,9 +145,9 @@ test_multiple_threads(void)
 
   for (int i = 0; i < 3; i++) {
     ids[i] = i + 1;
-    tids[i] = thread_create(worker_multi, &ids[i]);
+    tids[i] = create_thread(worker_multi, &ids[i]);
     if (tids[i] < 0) {
-      printf("FAIL: thread_create for thread %d failed\n", i + 1);
+      printf("FAIL: create_thread for thread %d failed\n", i + 1);
       exit(1);
     }
     printf("Parent: created thread %d with tid=%d\n", i + 1, tids[i]);
@@ -153,9 +155,9 @@ test_multiple_threads(void)
 
   // join all threads
   for (int i = 0; i < 3; i++) {
-    int ret = thread_join(tids[i]);
+    int ret = join_thread(tids[i]);
     if (ret < 0) {
-      printf("FAIL: thread_join for tid=%d returned %d\n", tids[i], ret);
+      printf("FAIL: join_thread for tid=%d returned %d\n", tids[i], ret);
       exit(1);
     }
     printf("Parent: joined thread tid=%d\n", ret);
@@ -188,13 +190,13 @@ test_argument_passing(void)
   arg_result = 0;
   int val = 7;
 
-  int tid = thread_create(worker_arg, &val);
+  int tid = create_thread(worker_arg, &val);
   if (tid < 0) {
-    printf("FAIL: thread_create returned %d\n", tid);
+    printf("FAIL: create_thread returned %d\n", tid);
     exit(1);
   }
 
-  thread_join(tid);
+  join_thread(tid);
 
   printf("Parent: arg_result = %d (expected 49)\n", arg_result);
   if (arg_result == 49)

@@ -52,3 +52,5 @@ entry("join");
 entry("sem_wait");
 entry("sem_post");
 entry("getcwd");
+entry("thread_create");
+entry("thread_join");
