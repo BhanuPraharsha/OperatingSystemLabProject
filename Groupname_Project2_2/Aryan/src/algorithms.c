@@ -8,6 +8,9 @@
 // algorithm 1: Custom Multiprocessor Round Robin (GLobal Ready Queue)
 
 void run_custom_rr(Process processes[], int num_processes, int num_cpus) {
+    int time_quantum ;
+    printf("choose the time quantum: \n");
+    scanf("%d", &time_quantum);
     printf("\n --- Starting Multiprocessor Round Robin (Qunatum = 4)---\n");
     printf("Time\t");
 
@@ -28,7 +31,7 @@ void run_custom_rr(Process processes[], int num_processes, int num_cpus) {
 
     int current_time = 0;
     int completed_count = 0;
-    int time_quantum = 4;
+    
 
 
     while (completed_count < num_processes) {
@@ -148,10 +151,7 @@ void run_edf(Process processes[], int num_processes, int num_cpus){
             }
         }
         current_time++;
-        // if(current_time > 1000){
-        //     printf("wtf\n");
-        //     break;
-        // }
+        
     }
 }
 
